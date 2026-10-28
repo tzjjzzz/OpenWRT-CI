@@ -58,48 +58,45 @@ UPDATE_PACKAGE() {
 	UPDATE_PACKAGE "luci-app-hotkeylimit" "tzjjzzz/luci-app-hotkeylimit" "main"
 
 
-	# ====================== openwrt-bandix ======================
-echo "Adding openwrt-bandix..."
-rm -rf openwrt-bandix 2>/dev/null || true
-git clone --depth=1 --single-branch --branch main https://github.com/timsaya/openwrt-bandix.git /tmp/openwrt-bandix
-mkdir -p openwrt-bandix
-cp -rf /tmp/openwrt-bandix/openwrt-bandix/* openwrt-bandix/ 2>/dev/null || true
-rm -rf /tmp/openwrt-bandix
-echo "✅ openwrt-bandix (frontend) added successfully! (Makefile is now at openwrt-bandix/Makefile)"
+	# ====================== bandix / bandix-plus ======================
+	# 本脚本在源码根目录执行，包必须放进 ./package/ 才会被 OpenWrt 编译系统扫描，
+	# 否则 CONFIG_PACKAGE_xxx=y 会被 defconfig 静默丢弃，固件里就没有这些包。
+	# 上游仓库内层有一个与仓库同名的目录，里面才是真正的包（含 Makefile）。
+	ADD_BANDIX() {
+		local REPO=$1
+		local PKG=$2  # 包在 feeds 中的实际名称（用于清除同名包）
+		local TMP_DIR="/tmp/$REPO"
+		local DEST="./package/$REPO"
 
+		echo "Adding $REPO..."
+		# 清除 feeds 中可能存在的同名包，避免重复定义
+		find ./feeds/luci/ ./feeds/packages/ -maxdepth 3 -type d -iname "$PKG" -exec rm -rf {} + 2>/dev/null || true
+		rm -rf "$TMP_DIR" "$DEST"
 
+		if ! git clone --depth=1 --single-branch --branch main "https://github.com/timsaya/$REPO.git" "$TMP_DIR"; then
+			echo "❌ $REPO clone failed!"
+			exit 1
+		fi
+		if [ ! -f "$TMP_DIR/$REPO/Makefile" ]; then
+			echo "❌ $REPO: Makefile not found, upstream layout may have changed!"
+			exit 1
+		fi
 
-	
-	# ====================== Bandix 前端 (LuCI) ======================
-echo "Adding luci-app-bandix..."
-rm -rf luci-app-bandix 2>/dev/null || true
-git clone --depth=1 --single-branch --branch main https://github.com/timsaya/luci-app-bandix.git /tmp/luci-app-bandix
-mkdir -p luci-app-bandix
-cp -rf /tmp/luci-app-bandix/luci-app-bandix/* luci-app-bandix/ 2>/dev/null || true
-rm -rf /tmp/luci-app-bandix
-echo "✅ luci-app-bandix (frontend) added successfully! (Makefile is now at luci-app-bandix/Makefile)"
+		mkdir -p ./package
+		if ! cp -rf "$TMP_DIR/$REPO" "$DEST" || [ ! -f "$DEST/Makefile" ]; then
+			echo "❌ $REPO: copy to $DEST failed!"
+			exit 1
+		fi
+		rm -rf "$TMP_DIR"
+		echo "✅ $REPO added successfully! (Makefile is at $DEST/Makefile)"
+	}
 
-
-
-
-
-
-echo "Adding bandix-plus backend (openwrt-bandix-plus)..."
-rm -rf bandix-plus openwrt-bandix-plus 2>/dev/null || true
-git clone --depth=1 --single-branch --branch main https://github.com/timsaya/openwrt-bandix-plus.git /tmp/openwrt-bandix-plus
-mkdir -p bandix-plus
-cp -rf /tmp/openwrt-bandix-plus/openwrt-bandix-plus/* bandix-plus/ 2>/dev/null || true
-rm -rf /tmp/openwrt-bandix-plus
-echo "✅ bandix-plus (backend) added successfully! (Makefile is now at bandix-plus/Makefile)"
-
-# ====================== bandix-plus 前端 (LuCI) ======================
-echo "Adding luci-app-bandix-plus..."
-rm -rf luci-app-bandix-plus 2>/dev/null || true
-git clone --depth=1 --single-branch --branch main https://github.com/timsaya/luci-app-bandix-plus.git /tmp/luci-app-bandix-plus
-mkdir -p luci-app-bandix-plus
-cp -rf /tmp/luci-app-bandix-plus/luci-app-bandix-plus/* luci-app-bandix-plus/ 2>/dev/null || true
-rm -rf /tmp/luci-app-bandix-plus
-echo "✅ luci-app-bandix-plus (frontend) added successfully! (Makefile is now at luci-app-bandix-plus/Makefile)"
+	# bandix 后端 + 前端
+	ADD_BANDIX "openwrt-bandix" "bandix"
+	ADD_BANDIX "luci-app-bandix" "luci-app-bandix"
+	# bandix-plus 后端 + 前端
+	ADD_BANDIX "openwrt-bandix-plus" "bandix-plus"
+	ADD_BANDIX "luci-app-bandix-plus" "luci-app-bandix-plus"
 
 # UPDATE_PACKAGE "包名" "项目地址" "项目分支" "pkg，可选，从大杂烩中单独提取包名插件"
 #UPDATE_PACKAGE "argon" "sbwml/luci-theme-argon" "openwrt-25.12"
