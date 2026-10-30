@@ -56,6 +56,10 @@ UPDATE_PACKAGE() {
 	#UPDATE_PACKAGE "luci-app-pushbot" "zzsj0928/luci-app-pushbot" "master"
 	UPDATE_PACKAGE "luci-app-wechatpush" "tzjjzzz/luci-app-wechatpush" "master"
 	UPDATE_PACKAGE "luci-app-hotkeylimit" "tzjjzzz/luci-app-hotkeylimit" "main"
+	# OpenAppFilter 行为管控：源码含 luci-app-oaf(界面) / open-app-filter(服务) / oaf(内核模块) 三个包，
+	# 内核模块必须随固件内核一起编译（官方 release 的 kmod 校验 vermagic，装不上自编固件）。
+	# 后三个名称用于清除 feeds 里可能存在的同名旧包，避免重复定义。
+	UPDATE_PACKAGE "open-app-filter" "destan19/OpenAppFilter" "master" "" "luci-app-appfilter luci-app-oaf oaf"
 
 
 	# ====================== bandix / bandix-plus ======================
