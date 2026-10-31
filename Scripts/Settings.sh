@@ -12,11 +12,22 @@ find ./feeds/luci/modules/luci-mod-system/ -type f -name "flash.js" -exec sed -i
 find ./feeds/luci/modules/luci-mod-status/ -type f -name "10_system.js" -exec sed -i "s/(\(luciversion || ''\))/(\1) + (' \/ $WRT_MARK-$WRT_DATE')/g" {} +
 
 WIFI_UC="./package/network/config/wifi-scripts/files/lib/wifi/mac80211.uc"
-if [ -f "$WIFI_UC" ]; then
+ROUTER_TOOL="./package/emortal/luci-app-router-tool/root/etc/config/router-tool"
+WIFI_CONFIG=""
+if [ -f "$ROUTER_TOOL" ]; then
+	WIFI_CONFIG="$ROUTER_TOOL"
+	WIFI_SSID_RULE="s/option ssid '.*'/option ssid '$WRT_SSID'/g"
+	WIFI_KEY_RULE="s/option key '.*'/option key '$WRT_WORD'/g"
+elif [ -f "$WIFI_UC" ]; then
+	WIFI_CONFIG="$WIFI_UC"
+	WIFI_SSID_RULE="s/ssid='.*'/ssid='$WRT_SSID'/g"
+	WIFI_KEY_RULE="s/key='.*'/key='$WRT_WORD'/g"
+fi
+if [ -n "$WIFI_CONFIG" ]; then
 	#修改WIFI名称
-	sed -i "s/ssid='.*'/ssid='$WRT_SSID'/g" $WIFI_UC
+	sed -i "$WIFI_SSID_RULE" "$WIFI_CONFIG"
 	#修改WIFI密码
-	sed -i "s/key='.*'/key='$WRT_WORD'/g" $WIFI_UC
+	sed -i "$WIFI_KEY_RULE" "$WIFI_CONFIG"
 fi
 
 CFG_FILE="./package/base-files/files/bin/config_generate"
